@@ -206,5 +206,81 @@ DEEPSEEK_API_KEY=your_deepseek_api_key
 
 ## 📁 Project Structure
 
-### Current Implementation
 ```
+ToDoListSystem/
+├── frontend/                      # React frontend application
+│   ├── src/
+│   │   ├── components/           # React components
+│   │   │   ├── ui/              # Reusable UI components
+│   │   │   ├── TodoListContainer.tsx    # Main container component
+│   │   │   ├── TodoSection.tsx          # Todo section with form and list
+│   │   │   ├── SuggestionPanel.tsx      # AI suggestions dialog
+│   │   │   └── SortDropdown.tsx         # Sorting component
+│   │   ├── graphql/             # GraphQL queries and mutations
+│   │   ├── types/               # TypeScript type definitions
+│   │   ├── hooks/               # Custom React hooks
+│   │   └── pages/               # Page components
+│   ├── public/                  # Static assets
+│   ├── tests/                   # Frontend tests
+│   └── vite.config.ts          # Vite configuration
+│
+├── backend/                     # FastAPI backend application
+│   ├── app/
+│   │   ├── api/                # API endpoints
+│   │   ├── graphql/            # GraphQL schema and resolvers
+│   │   ├── models.py           # SQLAlchemy models
+│   │   ├── crud.py            # Database operations
+│   │   ├── schema.py          # Pydantic schemas
+│   │   └── ai_service.py      # AI suggestion service
+│   ├── tests/                  # Backend tests
+│   ├── alembic/                # Database migrations
+│   └── requirements.txt        # Python dependencies
+│
+├── docker-compose.yml          # Docker compose configuration
+├── .gitignore                  # Git ignore rules
+└── README.md                   # Project documentation
+```
+
+### Key Components
+
+#### Frontend Components
+- `TodoListContainer`: Main component managing application state and data flow
+- `TodoSection`: Handles todo form and list rendering
+- `SuggestionPanel`: Manages AI-generated suggestions display
+- `ui/*`: Reusable UI components built with shadcn/ui
+
+#### Backend Services
+- `ai_service.py`: Handles AI-powered suggestion generation
+- `crud.py`: Database operations for todos
+- `schema.py`: GraphQL schema definitions
+- `models.py`: SQLAlchemy database models
+
+### Database Schema
+
+```sql
+Table: todos
+├── id: Integer (Primary Key)
+├── title: String
+├── completed: Boolean
+├── urgency: Integer
+├── created_at: DateTime
+└── updated_at: DateTime
+```
+
+### API Endpoints
+
+#### GraphQL Endpoint
+- `/graphql`: Main GraphQL endpoint
+
+#### GraphQL Operations
+- Queries:
+  - `todos`: Get all todos
+- Mutations:
+  - `createTodo`: Create a new todo
+  - `updateTodo`: Update an existing todo
+  - `deleteTodo`: Delete a todo
+  - `deleteAllTodos`: Delete all todos
+  - `deleteCompletedTodos`: Delete completed todos
+  - `generateTodoSuggestion`: Generate AI suggestions
+
+For more detailed API documentation, run the backend server and visit `/docs` or `/graphql` for the GraphQL playground.
