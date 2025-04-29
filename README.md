@@ -103,6 +103,48 @@ A modern, AI-powered todo list application with multi-language support and intel
 - Python 3.8+
 - Git
 - DeepSeek API Key (see below)
+- Docker and Docker Compose (for containerized setup)
+
+### Docker Setup (Recommended)
+
+The easiest way to run the application is using Docker. This method ensures consistent environments and eliminates the need for manual setup of Python and Node.js.
+
+```bash
+# Clone the repository
+git clone https://github.com/baconlgtm/ToDoListSystem.git
+cd ToDoListSystem
+
+# Create and configure environment files
+cp .env.example frontend/.env
+cp .env.example backend/.env
+
+# Build and start the containers
+docker compose build
+docker compose up -d
+
+# View logs (optional)
+docker compose logs -f
+```
+
+The application will be available at:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+- GraphQL Playground: http://localhost:8000/graphql
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+To rebuild after making changes:
+```bash
+docker compose build
+docker compose up -d
+```
+
+### Manual Setup (Alternative)
+
+If you prefer to run the application without Docker, follow these steps:
 
 ### Getting a DeepSeek API Key
 
@@ -204,7 +246,120 @@ DEEPSEEK_API_KEY=your_deepseek_api_key
    - AI suggestions will be generated in the detected language
    - Language detection is automatic
 
-## 📁 Project Structure
+## 🐳 Docker Setup
+
+### Prerequisites
+- Docker Desktop installed and running
+- Docker Compose installed
+- Git (for cloning the repository)
+
+### Environment Setup
+
+1. Create backend/.env file with the following content:
+```env
+# API Keys
+DEEPSEEK_API_KEY=your_deepseek_api_key
+
+# Database Configuration
+DATABASE_URL=sqlite:///./todos.db
+
+# CORS Settings
+CORS_ORIGINS=["http://localhost:5173"]
+```
+
+### Running with Docker
+
+1. **Test Docker Setup (Recommended)**
+```bash
+# Make the test script executable
+chmod +x test_docker_setup.sh
+
+# Run the test script
+./test_docker_setup.sh
+```
+This script will:
+- Check if Docker is running
+- Verify docker-compose is installed
+- Validate environment files
+- Build and start containers
+- Test if services are responding
+
+2. **Manual Docker Setup**
+```bash
+# Build and start the containers
+docker-compose up --build -d
+
+# View logs (optional)
+docker-compose logs -f
+
+# Stop the containers
+docker-compose down
+```
+
+### Accessing the Application
+Once the containers are running, you can access:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- GraphQL Playground: http://localhost:8000/graphql
+
+### Docker Container Structure
+```
+┌─────────────────┐      ┌─────────────────┐
+│    Frontend     │      │     Backend     │
+│   (Port 5173)   │◄────►│   (Port 8000)   │
+│    Node.js      │      │    FastAPI      │
+└─────────────────┘      └─────────────────┘
+                               │
+                               ▼
+                        ┌─────────────────┐
+                        │    SQLite DB    │
+                        │   (Internal)    │
+                        └─────────────────┘
+```
+
+### Troubleshooting Docker Setup
+
+1. **Port Conflicts**
+   If ports 5173 or 8000 are already in use:
+   ```bash
+   # Find processes using the ports
+   lsof -i :5173
+   lsof -i :8000
+   
+   # Stop the containers
+   docker-compose down
+   ```
+
+2. **Container Logs**
+   ```bash
+   # View frontend logs
+   docker-compose logs frontend
+   
+   # View backend logs
+   docker-compose logs backend
+   
+   # Follow logs in real-time
+   docker-compose logs -f
+   ```
+
+3. **Common Issues**
+   - If the frontend fails to build but runs: This is expected as it runs in development mode
+   - If the backend fails to start: Check the DEEPSEEK_API_KEY in backend/.env
+   - If containers keep restarting: Check the logs for error messages
+
+4. **Reset Everything**
+   ```bash
+   # Stop and remove all containers
+   docker-compose down
+   
+   # Remove all built images
+   docker-compose down --rmi all
+   
+   # Clean volumes (warning: this will delete the database)
+   docker-compose down -v
+   ```
+
+## 🐳 Project Structure
 
 ```
 ToDoListSystem/

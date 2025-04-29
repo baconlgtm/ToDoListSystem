@@ -2,31 +2,45 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: todo-backend
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - ./backend/.env:/app/.env
+      - backend_data:/app/data
     environment:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DATABASE_URL=sqlite:///./data/todos.db
+      - CORS_ORIGINS=["http://localhost:5173"]
+      - PYTHONUNBUFFERED=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 10s
     restart: unless-stopped
     networks:
       - todo-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: todo-frontend
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_BACKEND_URL=http://backend:8000
+      - VITE_GRAPHQL_URL=http://backend:8000/graphql
     depends_on:
       backend:
         condition: service_healthy
@@ -34,6 +48,11 @@ services:
     networks:
       - todo-network
 
+volumes:
+  backend_data:
+    name: todo-backend-data
+
 networks:
   todo-network:
+    name: todo-network
     driver: bridge 

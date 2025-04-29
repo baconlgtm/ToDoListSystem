@@ -10,4 +10,5 @@ python-multipart>=0.0.5
 pytest>=7.0.0
 httpx>=0.24.0
 requests>=2.31.0
-strawberry-graphql>=0.200.0 
+strawberry-graphql>=0.200.0
+langdetect>=1.0.9 
