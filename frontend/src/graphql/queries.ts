@@ -62,12 +62,16 @@ export const GENERATE_TODO_SUGGESTION = gql`
 
 export const DELETE_ALL_TODOS = gql`
   mutation DeleteAllTodos {
-    deleteAllTodos
+    deleteAllTodos {
+      success
+    }
   }
 `;
 
 export const DELETE_COMPLETED_TODOS = gql`
   mutation DeleteCompletedTodos {
-    deleteCompletedTodos
+    deleteCompletedTodos {
+      success
+    }
   }
 `;

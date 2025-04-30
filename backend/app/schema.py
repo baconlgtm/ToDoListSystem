@@ -93,6 +93,10 @@ class TodoSuggestionResponse:
     suggestions: List[str]
 
 @strawberry.type
+class DeleteResponse:
+    success: bool
+
+@strawberry.type
 class Mutation:
     @strawberry.mutation
     async def create_todo(self, info, input: TodoCreateInput) -> Todo:
@@ -144,18 +148,18 @@ class Mutation:
         return None
 
     @strawberry.mutation
-    async def delete_all_todos(self, info: Info) -> bool:
+    async def delete_all_todos(self, info: Info) -> DeleteResponse:
         """Delete all todos."""
         db = info.context["db"]
         deleted_count = crud.delete_all_todos(db)
-        return deleted_count > 0
+        return DeleteResponse(success=deleted_count > 0)
 
     @strawberry.mutation
-    async def delete_completed_todos(self, info: Info) -> bool:
+    async def delete_completed_todos(self, info: Info) -> DeleteResponse:
         """Delete all completed todos."""
         db = info.context["db"]
         deleted_count = crud.delete_completed_todos(db)
-        return deleted_count > 0
+        return DeleteResponse(success=deleted_count > 0)
 
 async def get_context():
     db = next(get_db())

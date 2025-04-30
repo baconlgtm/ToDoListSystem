@@ -43,6 +43,7 @@ yarn-error.log*
 # IDE
 .idea/
 .vscode/
+.cursorrules
 *.swp
 *.swo
 *~

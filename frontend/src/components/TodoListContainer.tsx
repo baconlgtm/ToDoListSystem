@@ -21,46 +21,82 @@ import { Todo } from '../types/todo';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { SortDropdown } from "./SortDropdown";
 import { SortOption } from './SortDropdown';
+import { useToast } from "../components/ui/use-toast";
+import { Alert, AlertDescription } from "./ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function TodoListContainer() {
+  const { toast } = useToast();
+  
   // GraphQL queries and mutations
   const { loading, error, data } = useQuery(GET_TODOS);
   const [createTodo] = useMutation(CREATE_TODO, {
-    refetchQueries: [{ query: GET_TODOS }],
+    onError: (error) => {
+      toast({
+        title: "Error creating todo",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
-  const [updateTodo] = useMutation(UPDATE_TODO);
+  
+  const [updateTodo] = useMutation(UPDATE_TODO, {
+    onError: (error) => {
+      toast({
+        title: "Error updating todo",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   const [deleteTodo] = useMutation(DELETE_TODO, {
-    refetchQueries: [{ query: GET_TODOS }],
+    onError: (error) => {
+      toast({
+        title: "Error deleting todo",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
+  
   const [deleteAllTodos] = useMutation(DELETE_ALL_TODOS, {
-    refetchQueries: [{ query: GET_TODOS }],
+    onError: (error) => {
+      toast({
+        title: "Error deleting all todos",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
+  
   const [deleteCompletedTodos] = useMutation(DELETE_COMPLETED_TODOS, {
-    refetchQueries: [{ query: GET_TODOS }],
+    onError: (error) => {
+      toast({
+        title: "Error deleting completed todos",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
+  
   const [generateSuggestion] = useMutation(GENERATE_TODO_SUGGESTION);
   
-  // State management for suggestions panel
+  // State management
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentSuggestions, setCurrentSuggestions] = useState<string[]>([]);
   const [baseTodo, setBaseTodo] = useState('');
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
-  
-  // State for delete all confirmation dialog
+  const [suggestionError, setSuggestionError] = useState<string>();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   const [showDeleteCompletedDialog, setShowDeleteCompletedDialog] = useState(false);
-
-  // State for sorting
   const [sortOption, setSortOption] = useState<SortOption>('timestamp');
 
-  /**
-   * Generate multiple suggestions for a todo item
-   * @param title - The todo title to base suggestions on
-   * @param urgency - The urgency level of the todo
-   */
   const generateMultipleSuggestions = async (title: string, urgency: number) => {
     try {
       setIsGeneratingSuggestions(true);
+      setSuggestionError(undefined);
+      
       const { data } = await generateSuggestion({
         variables: {
           existingTodos: [title],
@@ -68,25 +104,18 @@ export default function TodoListContainer() {
         }
       });
       
-      // Always show the panel, even if there are no suggestions
       setCurrentSuggestions(data?.generateTodoSuggestion?.suggestions || []);
       setBaseTodo(title);
       setShowSuggestions(true);
     } catch (error) {
-      console.error('Error generating suggestions:', error);
-      // Show empty suggestions panel with error state
+      setSuggestionError(error instanceof Error ? error.message : 'Failed to generate suggestions');
       setCurrentSuggestions([]);
-      setBaseTodo(title);
       setShowSuggestions(true);
     } finally {
       setIsGeneratingSuggestions(false);
     }
   };
 
-  /**
-   * Apply selected suggestions as new todos
-   * @param selectedSuggestions - Array of selected suggestions with their urgency levels
-   */
   const handleApplySuggestions = async (selectedSuggestions: { title: string; urgency: number }[]) => {
     try {
       const promises = selectedSuggestions.map(suggestion => 
@@ -94,38 +123,90 @@ export default function TodoListContainer() {
           variables: { 
             title: suggestion.title,
             urgency: suggestion.urgency
-          } 
+          },
+          optimisticResponse: {
+            createTodo: {
+              id: Date.now(),
+              title: suggestion.title,
+              completed: false,
+              urgency: suggestion.urgency,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              __typename: "Todo"
+            }
+          },
+          update: (cache, { data }) => {
+            const existingTodos = cache.readQuery<{ todos: Todo[] }>({
+              query: GET_TODOS
+            });
+            
+            if (existingTodos && data) {
+              cache.writeQuery({
+                query: GET_TODOS,
+                data: {
+                  todos: [...existingTodos.todos, data.createTodo]
+                }
+              });
+            }
+          }
         })
       );
+      
       await Promise.all(promises);
       setShowSuggestions(false);
+      toast({
+        title: "Success",
+        description: `Added ${selectedSuggestions.length} new todos`,
+      });
     } catch (error) {
-      // Error handling is managed by Apollo Client
+      toast({
+        title: "Error",
+        description: "Failed to add suggestions",
+        variant: "destructive",
+      });
     }
   };
 
-  /**
-   * Create a new todo item
-   * @param title - The title of the todo
-   * @param urgency - The urgency level of the todo
-   */
   const handleCreateTodo = async (title: string, urgency: number) => {
     try {
       await createTodo({
         variables: { title, urgency },
-        refetchQueries: [{ query: GET_TODOS }],
+        optimisticResponse: {
+          createTodo: {
+            id: Date.now(),
+            title,
+            completed: false,
+            urgency,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            __typename: "Todo"
+          }
+        },
+        update: (cache, { data }) => {
+          const existingTodos = cache.readQuery<{ todos: Todo[] }>({
+            query: GET_TODOS
+          });
+          
+          if (existingTodos && data) {
+            cache.writeQuery({
+              query: GET_TODOS,
+              data: {
+                todos: [...existingTodos.todos, data.createTodo]
+              }
+            });
+          }
+        }
+      });
+      
+      toast({
+        title: "Success",
+        description: "Todo created successfully",
       });
     } catch (error) {
-      // Error handling is managed by Apollo Client
+      // Error handling is managed by Apollo Client and toast
     }
   };
 
-  /**
-   * Update an existing todo item
-   * @param id - The ID of the todo to update
-   * @param completed - The new completion status
-   * @param urgency - The new urgency level (optional)
-   */
   const handleUpdateTodo = async (id: number, completed: boolean, urgency?: number) => {
     try {
       await updateTodo({
@@ -134,24 +215,47 @@ export default function TodoListContainer() {
           completed, 
           urgency: urgency !== undefined ? Number(urgency) : undefined 
         },
-        refetchQueries: [{ query: GET_TODOS }],
+        optimisticResponse: {
+          updateTodo: {
+            id,
+            completed,
+            urgency: urgency !== undefined ? Number(urgency) : undefined,
+            __typename: "Todo"
+          }
+        }
       });
     } catch (error) {
-      // Error handling is managed by Apollo Client
+      // Error handling is managed by Apollo Client and toast
     }
   };
 
-  /**
-   * Delete a todo item
-   * @param id - The ID of the todo to delete
-   */
   const handleDelete = async (id: number) => {
     try {
       await deleteTodo({
         variables: { id },
+        optimisticResponse: {
+          deleteTodo: {
+            id,
+            __typename: "Todo"
+          }
+        },
+        update: (cache) => {
+          const existingTodos = cache.readQuery<{ todos: Todo[] }>({
+            query: GET_TODOS
+          });
+          
+          if (existingTodos) {
+            cache.writeQuery({
+              query: GET_TODOS,
+              data: {
+                todos: existingTodos.todos.filter(todo => todo.id !== id)
+              }
+            });
+          }
+        }
       });
     } catch (error) {
-      // Error handling is managed by Apollo Client
+      // Error handling is managed by Apollo Client and toast
     }
   };
 
@@ -160,7 +264,16 @@ export default function TodoListContainer() {
    */
   const handleDeleteAll = async () => {
     try {
-      await deleteAllTodos();
+      await deleteAllTodos({
+        update: (cache) => {
+          cache.writeQuery({
+            query: GET_TODOS,
+            data: {
+              todos: []
+            }
+          });
+        }
+      });
       setShowDeleteAllDialog(false);
     } catch (error) {
       // Error handling is managed by Apollo Client
@@ -172,7 +285,22 @@ export default function TodoListContainer() {
    */
   const handleDeleteCompleted = async () => {
     try {
-      await deleteCompletedTodos();
+      await deleteCompletedTodos({
+        update: (cache) => {
+          const existingTodos = cache.readQuery<{ todos: Todo[] }>({
+            query: GET_TODOS
+          });
+          
+          if (existingTodos) {
+            cache.writeQuery({
+              query: GET_TODOS,
+              data: {
+                todos: existingTodos.todos.filter(todo => !todo.completed)
+              }
+            });
+          }
+        }
+      });
       setShowDeleteCompletedDialog(false);
     } catch (error) {
       // Error handling is managed by Apollo Client
@@ -189,42 +317,43 @@ export default function TodoListContainer() {
   // Error state
   if (error) return (
     <div className="flex justify-center items-center min-h-screen">
-      <div className="text-red-500">Error: {error.message}</div>
+      <Alert variant="destructive" className="max-w-md">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>Error loading todos: {error.message}</AlertDescription>
+      </Alert>
     </div>
   );
 
   // Sort todos based on selected criteria
-  const sortedTodos = [...data.todos].sort((a, b) => {
+  const sortedTodos = [...data.todos].sort((a: Todo, b: Todo) => {
     if (sortOption === 'timestamp') {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     } else {
-      return (b.urgency || 0) - (a.urgency || 0);
+      return b.urgency - a.urgency;
     }
   });
 
   // Render the main container with all components
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold">Todo List</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-4">
           <SortDropdown value={sortOption} onChange={setSortOption} />
-          <div className="flex gap-2">
-            <Button
-              variant="destructive"
-              onClick={() => setShowDeleteCompletedDialog(true)}
-              disabled={!sortedTodos.some(todo => todo.completed)}
-            >
-              Delete Completed
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setShowDeleteAllDialog(true)}
-              disabled={!sortedTodos.length}
-            >
-              Delete All
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteCompletedDialog(true)}
+            className="text-sm"
+          >
+            Delete Completed
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteAllDialog(true)}
+            className="text-sm"
+          >
+            Delete All
+          </Button>
         </div>
       </div>
       
@@ -271,6 +400,7 @@ export default function TodoListContainer() {
           onClose={() => setShowSuggestions(false)}
           onApply={handleApplySuggestions}
           isLoading={isGeneratingSuggestions}
+          error={suggestionError}
         />
       )}
     </div>

@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
 import { Pencil, Trash2, Sparkles } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface TodoItemProps {
   todo: Todo;
@@ -43,75 +44,88 @@ const TodoItem: React.FC<TodoItemProps> = ({
     }
   };
 
+  const formatDate = (date: string | null) => {
+    if (!date) return '';
+    return format(new Date(date), 'MMM d, yyyy h:mm a');
+  };
+
   return (
-    <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
-      <div className="flex items-center space-x-4">
-        <Checkbox
-          checked={todo.completed}
-          onCheckedChange={() => onToggleComplete(todo.id)}
-        />
-        {isEditing ? (
-          <div className="flex items-center space-x-2">
-            <Input
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-64"
-            />
-            <Select
-              value={editUrgency?.toString() || "0"}
-              onValueChange={(value: string) => {
-                setEditUrgency(parseInt(value));
-              }}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Urgency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">None</SelectItem>
-                <SelectItem value="1">Low</SelectItem>
-                <SelectItem value="2">Medium</SelectItem>
-                <SelectItem value="3">High</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleUpdate}>Save</Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center space-x-2">
-            <span className={todo.completed ? 'line-through text-gray-500' : ''}>
-              {todo.title}
-            </span>
-            <div className={`w-3 h-3 rounded-full ${getUrgencyColor(todo.urgency)}`} />
-          </div>
-        )}
+    <div className="flex flex-col bg-white rounded-lg shadow">
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center space-x-4">
+          <Checkbox
+            checked={todo.completed}
+            onCheckedChange={() => onToggleComplete(todo.id)}
+          />
+          {isEditing ? (
+            <div className="flex items-center space-x-2">
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-64"
+              />
+              <Select
+                value={editUrgency?.toString() || "0"}
+                onValueChange={(value: string) => {
+                  setEditUrgency(parseInt(value));
+                }}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Urgency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">None</SelectItem>
+                  <SelectItem value="1">Low</SelectItem>
+                  <SelectItem value="2">Medium</SelectItem>
+                  <SelectItem value="3">High</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleUpdate}>Save</Button>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <span className={todo.completed ? 'line-through text-gray-500' : ''}>
+                {todo.title}
+              </span>
+              <div className={`w-3 h-3 rounded-full ${getUrgencyColor(todo.urgency)}`} />
+            </div>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onGenerateSuggestions(todo.title, todo.urgency)}
+            disabled={todo.completed}
+            title="Generate AI suggestions"
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsEditing(true)}
+            disabled={todo.completed}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(todo.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-      <div className="flex items-center space-x-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onGenerateSuggestions(todo.title, todo.urgency)}
-          disabled={todo.completed}
-          title="Generate AI suggestions"
-        >
-          <Sparkles className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsEditing(true)}
-          disabled={todo.completed}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(todo.id)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+      <div className="px-4 pb-2 text-xs text-gray-500">
+        <div>Created: {formatDate(todo.createdAt)}</div>
+        {todo.updatedAt !== todo.createdAt && (
+          <div>Updated: {formatDate(todo.updatedAt)}</div>
+        )}
       </div>
     </div>
   );
